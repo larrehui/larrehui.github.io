@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>map guesser</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3-geo@3"></script>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --panel: #111622;
+      --card: #1a2234;
+      --border: #2a3652;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --accent: #38bdf8;
+      --correct: #22c55e;
+      --wrong: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px;
+      gap: 22px;
+    }
+
+    .topbar {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .back-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover {
+      color: var(--text);
+    }
+
+    .score-board {
+      display: flex;
+      gap: 16px;
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 999px;
+    }
+
+    .score-board strong {
+      color: var(--accent);
+    }
+
+    .game-container {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .map-stage {
+      width: 100%;
+      height: 390px;
+      background: radial-gradient(circle at center, #141c2e 0%, #0d121d 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .continent-badge {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      background: rgba(17, 22, 34, 0.85);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.25s, transform 0.25s;
+    }
+
+    .continent-badge.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .continent-country {
+      fill: #1e293b;
+      stroke: #334155;
+      stroke-width: 0.8px;
+      transition: opacity 0.35s ease;
+    }
+
+    .target-country {
+      fill: var(--accent);
+      stroke: #bae6fd;
+      stroke-width: 1.5px;
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.35));
+      transition: fill 0.25s ease, stroke 0.25s ease;
+    }
+
+    .target-country.correct {
+      fill: var(--correct);
+      stroke: #bbf7d0;
+      filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.45));
+    }
+
+    .target-country.wrong {
+      fill: var(--wrong);
+      stroke: #fecaca;
+      filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.45));
+    }
+
+    .status-bar {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+
+    .feedback {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .feedback.correct {
+      color: var(--correct);
+    }
+
+    .feedback.wrong {
+      color: var(--wrong);
+    }
+
+    .next-btn {
+      background: var(--accent);
+      color: #0a0d14;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      display: none;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .next-btn.visible {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .next-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.92;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .option-btn {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .option-btn:disabled {
+      cursor: default;
+    }
+
+    .option-btn.correct {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: var(--correct);
+      color: #dcfce7;
+      font-weight: 600;
+    }
+
+    .option-btn.wrong {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: var(--wrong);
+      color: #fee2e2;
+    }
+
+    .loader {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 560px) {
+      .map-stage {
+        height: 300px;
+      }
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="index.html" class="back-link">&larr; back</a>
+    <div class="score-board">
+      <span>Correct: <strong id="correctCount">0</strong></span>
+      <span>Total: <strong id="totalCount">0</strong></span>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <div class="map-stage">
+      <div class="continent-badge" id="continentBadge">Continent</div>
+      <div class="loader" id="loader">Loading world map...</div>
+      <svg id="mapSvg" viewBox="0 0 760 390" style="display:none;" aria-label="Country Map">
+        <g id="continentLayer"></g>
+        <g id="targetLayer"></g>
+      </svg>
+    </div>
+
+    <div class="status-bar">
+      <div class="feedback" id="feedbackText">Which country is highlighted?</div>
+      <button class="next-btn" id="nextBtn" type="button">Next Country &rarr;</button>
+    </div>
+
+    <div class="options-grid" id="optionsGrid"></div>
+  </div>
+
+  <script>
+    const CONTINENT_BOUNDS = {
+      'Africa': { name: 'Africa', lon: [-20, 52], lat: [-36, 38] },
+      'Europe': { name: 'Europe', lon: [-25, 45], lat: [34, 71] },
+      'Asia': { name: 'Asia', lon: [25, 150], lat: [-11, 55] },
+      'North America': { name: 'North America', lon: [-165, -52], lat: [7, 72] },
+      'South America': { name: 'South America', lon: [-82, -34], lat: [-56, 13] },
+      'Oceania': { name: 'Oceania', lon: [110, 180], lat: [-48, 0] }
+    };
+
+    // Map ISO-A3 codes or country names to continents for clean continent groupings
+    const COUNTRY_CONTINENT = {
+      // North America
+      'Canada': 'North America', 'United States of America': 'North America', 'United States': 'North America',
+      'Mexico': 'North America', 'Guatemala': 'North America', 'Belize': 'North America',
+      'Honduras': 'North America', 'El Salvador': 'North America', 'Nicaragua': 'North America',
+      'Costa Rica': 'North America', 'Panama': 'North America', 'Cuba': 'North America',
+      'Jamaica': 'North America', 'Haiti': 'North America', 'Dominican Republic': 'North America',
+      // South America
+      'Colombia': 'South America', 'Venezuela': 'South America', 'Guyana': 'South America',
+      'Suriname': 'South America', 'Ecuador': 'South America', 'Peru': 'South America',
+      'Brazil': 'South America', 'Bolivia': 'South America', 'Paraguay': 'South America',
+      'Chile': 'South America', 'Argentina': 'South America', 'Uruguay': 'South America',
+      // Europe
+      'Iceland': 'Europe', 'Ireland': 'Europe', 'United Kingdom': 'Europe', 'Norway': 'Europe',
+      'Sweden': 'Europe', 'Finland': 'Europe', 'Estonia': 'Europe', 'Latvia': 'Europe',
+      'Lithuania': 'Europe', 'Denmark': 'Europe', 'Netherlands': 'Europe', 'Belgium': 'Europe',
+      'Germany': 'Europe', 'Poland': 'Europe', 'Czechia': 'Europe', 'Czech Republic': 'Europe',
+      'Slovakia': 'Europe', 'France': 'Europe', 'Switzerland': 'Europe', 'Austria': 'Europe',
+      'Hungary': 'Europe', 'Romania': 'Europe', 'Moldova': 'Europe', 'Ukraine': 'Europe',
+      'Belarus': 'Europe', 'Portugal': 'Europe', 'Spain': 'Europe', 'Italy': 'Europe',
+      'Slovenia': 'Europe', 'Croatia': 'Europe', 'Bosnia and Herzegovina': 'Europe',
+      'Serbia': 'Europe', 'Montenegro': 'Europe', 'Albania': 'Europe', 'North Macedonia': 'Europe',
+      'Macedonia': 'Europe', 'Greece': 'Europe', 'Bulgaria': 'Europe',
+      // Africa
+      'Morocco': 'Africa', 'Algeria': 'Africa', 'Tunisia': 'Africa', 'Libya': 'Africa',
+      'Egypt': 'Africa', 'Mauritania': 'Africa', 'Mali': 'Africa', 'Niger': 'Africa',
+      'Chad': 'Africa', 'Sudan': 'Africa', 'South Sudan': 'Africa', 'Eritrea': 'Africa',
+      'Ethiopia': 'Africa', 'Somalia': 'Africa', 'Senegal': 'Africa', 'Guinea': 'Africa',
+      'Sierra Leone': 'Africa', 'Liberia': 'Africa', 'Ivory Coast': 'Africa', "Côte d'Ivoire": 'Africa',
+      'Burkina Faso': 'Africa', 'Ghana': 'Africa', 'Togo': 'Africa', 'Benin': 'Africa',
+      'Nigeria': 'Africa', 'Cameroon': 'Africa', 'Central African Republic': 'Africa',
+      'Gabon': 'Africa', 'Republic of the Congo': 'Africa', 'Congo': 'Africa',
+      'Democratic Republic of the Congo': 'Africa', 'Uganda': 'Africa', 'Kenya': 'Africa',
+      'Tanzania': 'Africa', 'United Republic of Tanzania': 'Africa', 'Angola': 'Africa',
+      'Zambia': 'Africa', 'Malawi': 'Africa', 'Mozambique': 'Africa', 'Zimbabwe': 'Africa',
+      'Botswana': 'Africa', 'Namibia': 'Africa', 'South Africa': 'Africa', 'Madagascar': 'Africa',
+      // Asia
+      'Turkey': 'Asia', 'Syria': 'Asia', 'Iraq': 'Asia', 'Iran': 'Asia', 'Saudi Arabia': 'Asia',
+      'Yemen': 'Asia', 'Oman': 'Asia', 'United Arab Emirates': 'Asia', 'Jordan': 'Asia',
+      'Israel': 'Asia', 'Georgia': 'Asia', 'Armenia': 'Asia', 'Azerbaijan': 'Asia',
+      'Kazakhstan': 'Asia', 'Uzbekistan': 'Asia', 'Turkmenistan': 'Asia', 'Kyrgyzstan': 'Asia',
+      'Tajikistan': 'Asia', 'Afghanistan': 'Asia', 'Pakistan': 'Asia', 'India': 'Asia',
+      'Nepal': 'Asia', 'Bhutan': 'Asia', 'Bangladesh': 'Asia', 'Sri Lanka': 'Asia',
+      'Myanmar': 'Asia', 'Thailand': 'Asia', 'Laos': 'Asia', 'Cambodia': 'Asia',
+      'Vietnam': 'Asia', 'Malaysia': 'Asia', 'Indonesia': 'Asia', 'Philippines': 'Asia',
+      'China': 'Asia', 'Mongolia': 'Asia', 'North Korea': 'Asia', 'South Korea': 'Asia',
+      'Japan': 'Asia',
+      // Oceania
+      'Australia': 'Oceania', 'New Zealand': 'Oceania', 'Papua New Guinea': 'Oceania'
+    };
+
+    const DISPLAY_NAMES = {
+      'United States of America': 'United States',
+      'United Republic of Tanzania': 'Tanzania',
+      'Democratic Republic of the Congo': 'DR Congo',
+      'Republic of the Congo': 'Republic of the Congo',
+      'Czech Republic': 'Czechia'
+    };
+
+    const svgEl = document.getElementById('mapSvg');
+    const continentLayer = document.getElementById('continentLayer');
+    const targetLayer = document.getElementById('targetLayer');
+    const loader = document.getElementById('loader');
+    const continentBadge = document.getElementById('continentBadge');
+    const feedbackText = document.getElementById('feedbackText');
+    const nextBtn = document.getElementById('nextBtn');
+    const optionsGrid = document.getElementById('optionsGrid');
+    const correctCountEl = document.getElementById('correctCount');
+    const totalCountEl = document.getElementById('totalCount');
+
+    const WIDTH = 760;
+    const HEIGHT = 390;
+    const PADDING = 34;
+
+    let countries = [];
+    let currentCountry = null;
+    let correctScore = 0;
+    let totalScore = 0;
+    let answered = false;
+
+    function getDisplayName(rawName) {
+      return DISPLAY_NAMES[rawName] || rawName;
+    }
+
+    async function loadGeoData() {
+      try {
+        const res = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
+        const data = await res.json();
+
+        countries = data.features
+          .filter(f => f.properties && COUNTRY_CONTINENT[f.properties.name])
+          .map(f => ({
+            feature: f,
+            name: getDisplayName(f.properties.name),
+            continent: COUNTRY_CONTINENT[f.properties.name]
+          }));
+
+        loader.style.display = 'none';
+        svgEl.style.display = 'block';
+        startRound();
+      } catch (err) {
+        loader.textContent = 'Failed to load map data. Please check your connection and refresh.';
+      }
+    }
+
+    function renderIsolatedCountry(countryObj) {
+      continentLayer.innerHTML = '';
+      targetLayer.innerHTML = '';
+      continentBadge.classList.remove('visible');
+
+      const projection = d3.geoMercator().fitExtent(
+        [[PADDING, PADDING], [WIDTH - PADDING, HEIGHT - PADDING]],
+        countryObj.feature
+      );
+      const pathGen = d3.geoPath().projection(projection);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathGen(countryObj.feature));
+      path.setAttribute('class', 'target-country');
+      path.id = 'activeTargetPath';
+      targetLayer.appendChild(path);
+    }
+
+    function renderContinentReveal(countryObj, isCorrect) {
+      continentLayer.innerHTML = '';
+      targetLayer.innerHTML = '';
+
+      const continentName = countryObj.continent;
+      continentBadge.textContent = continentName;
+      continentBadge.classList.add('visible');
+
+      const continentCountries = countries.filter(c => c.continent === continentName);
+      const bounds = CONTINENT_BOUNDS[continentName];
+
+      // Build bounding box feature so projection focuses cleanly on the continent
+      const bboxFeature = {
+        type: 'MultiPoint',
+        coordinates: [
+          [bounds.lon[0], bounds.lat[0]],
+          [bounds.lon[1], bounds.lat[1]]
+        ]
+      };
+
+      const projection = d3.geoMercator().fitExtent(
+        [[PADDING, PADDING], [WIDTH - PADDING, HEIGHT - PADDING]],
+        bboxFeature
+      );
+      const pathGen = d3.geoPath().projection(projection);
+
+      continentCountries.forEach(c => {
+        const d = pathGen(c.feature);
+        if (!d) return;
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', d);
+
+        if (c.name === countryObj.name) {
+          p.setAttribute('class', `target-country ${isCorrect ? 'correct' : 'wrong'}`);
+          targetLayer.appendChild(p);
+        } else {
+          p.setAttribute('class', 'continent-country');
+          continentLayer.appendChild(p);
+        }
+      });
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function startRound() {
+      answered = false;
+      nextBtn.classList.remove('visible');
+      feedbackText.textContent = 'Which country is highlighted?';
+      feedbackText.className = 'feedback';
+
+      const pool = countries.filter(c => !currentCountry || c.name !== currentCountry.name);
+      currentCountry = pool[Math.floor(Math.random() * pool.length)];
+
+      // Prefer distractors from the same continent so choices are interesting
+      const sameContinent = countries.filter(
+        c => c.continent === currentCountry.continent && c.name !== currentCountry.name
+      );
+      const otherCountries = countries.filter(
+        c => c.continent !== currentCountry.continent && c.name !== currentCountry.name
+      );
+
+      const distractors = shuffle(sameContinent).slice(0, 3);
+      while (distractors.length < 3) {
+        const extra = otherCountries[Math.floor(Math.random() * otherCountries.length)];
+        if (!distractors.some(d => d.name === extra.name)) {
+          distractors.push(extra);
+        }
+      }
+
+      const choices = shuffle([currentCountry, ...distractors]);
+
+      optionsGrid.innerHTML = '';
+      choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'option-btn';
+        btn.textContent = choice.name;
+        btn.addEventListener('click', () => handleChoice(choice.name, btn));
+        optionsGrid.appendChild(btn);
+      });
+
+      renderIsolatedCountry(currentCountry);
+    }
+
+    function handleChoice(selectedName, clickedBtn) {
+      if (answered) return;
+      answered = true;
+
+      const isCorrect = selectedName === currentCountry.name;
+      totalScore += 1;
+      if (isCorrect) {
+        correctScore += 1;
+      }
+
+      correctCountEl.textContent = correctScore;
+      totalCountEl.textContent = totalScore;
+
+      const buttons = optionsGrid.querySelectorAll('.option-btn');
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === currentCountry.name) {
+          btn.classList.add('correct');
+        } else if (btn === clickedBtn && !isCorrect) {
+          btn.classList.add('wrong');
+        }
+      });
+
+      if (isCorrect) {
+        feedbackText.textContent = `Right! That is ${currentCountry.name} (${currentCountry.continent}).`;
+        feedbackText.className = 'feedback correct';
+      } else {
+        feedbackText.textContent = `Wrong! That was ${currentCountry.name} (${currentCountry.continent}).`;
+        feedbackText.className = 'feedback wrong';
+      }
+
+      renderContinentReveal(currentCountry, isCorrect);
+      nextBtn.classList.add('visible');
+    }
+
+    nextBtn.addEventListener('click', startRound);
+
+    loadGeoData();
+  </script>
+</body>
+</html>
