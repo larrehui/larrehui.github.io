@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>map guesser</title>
-  <script src="https://cdn.jsdelivr.net/npm/d3-geo@3"></script>
   <style>
     :root {
       --bg: #0a0d14;
@@ -104,6 +103,7 @@
       opacity: 0;
       transform: translateY(-4px);
       transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
     }
 
     .continent-badge.visible {
@@ -120,28 +120,29 @@
     .continent-country {
       fill: #1e293b;
       stroke: #334155;
-      stroke-width: 0.8px;
-      transition: opacity 0.35s ease;
+      stroke-width: 1px;
+      vector-effect: non-scaling-stroke;
     }
 
     .target-country {
       fill: var(--accent);
-      stroke: #bae6fd;
+      stroke: #e0f2fe;
       stroke-width: 1.5px;
-      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.35));
+      vector-effect: non-scaling-stroke;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
       transition: fill 0.25s ease, stroke 0.25s ease;
     }
 
     .target-country.correct {
       fill: var(--correct);
-      stroke: #bbf7d0;
-      filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.45));
+      stroke: #dcfce7;
+      filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.45));
     }
 
     .target-country.wrong {
       fill: var(--wrong);
-      stroke: #fecaca;
-      filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.45));
+      stroke: #fee2e2;
+      filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.45));
     }
 
     .status-bar {
@@ -149,11 +150,12 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       padding: 0 4px;
     }
 
     .feedback {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
     }
 
@@ -175,6 +177,7 @@
       font-size: 0.92rem;
       cursor: pointer;
       display: none;
+      white-space: nowrap;
       transition: transform 0.15s, opacity 0.15s;
     }
 
@@ -275,18 +278,17 @@
 
   <script>
     const CONTINENT_BOUNDS = {
-      'Africa': { name: 'Africa', lon: [-20, 52], lat: [-36, 38] },
-      'Europe': { name: 'Europe', lon: [-25, 45], lat: [34, 71] },
-      'Asia': { name: 'Asia', lon: [25, 150], lat: [-11, 55] },
-      'North America': { name: 'North America', lon: [-165, -52], lat: [7, 72] },
-      'South America': { name: 'South America', lon: [-82, -34], lat: [-56, 13] },
-      'Oceania': { name: 'Oceania', lon: [110, 180], lat: [-48, 0] }
+      'Africa': { lon: [-20, 53], lat: [-36, 38] },
+      'Europe': { lon: [-25, 45], lat: [34, 71] },
+      'Asia': { lon: [25, 148], lat: [-11, 56] },
+      'North America': { lon: [-168, -52], lat: [7, 72] },
+      'South America': { lon: [-82, -34], lat: [-56, 13] },
+      'Oceania': { lon: [110, 179], lat: [-48, 0] }
     };
 
-    // Map ISO-A3 codes or country names to continents for clean continent groupings
     const COUNTRY_CONTINENT = {
       // North America
-      'Canada': 'North America', 'United States of America': 'North America', 'United States': 'North America',
+      'Canada': 'North America', 'USA': 'North America', 'United States of America': 'North America',
       'Mexico': 'North America', 'Guatemala': 'North America', 'Belize': 'North America',
       'Honduras': 'North America', 'El Salvador': 'North America', 'Nicaragua': 'North America',
       'Costa Rica': 'North America', 'Panama': 'North America', 'Cuba': 'North America',
@@ -297,27 +299,27 @@
       'Brazil': 'South America', 'Bolivia': 'South America', 'Paraguay': 'South America',
       'Chile': 'South America', 'Argentina': 'South America', 'Uruguay': 'South America',
       // Europe
-      'Iceland': 'Europe', 'Ireland': 'Europe', 'United Kingdom': 'Europe', 'Norway': 'Europe',
-      'Sweden': 'Europe', 'Finland': 'Europe', 'Estonia': 'Europe', 'Latvia': 'Europe',
-      'Lithuania': 'Europe', 'Denmark': 'Europe', 'Netherlands': 'Europe', 'Belgium': 'Europe',
-      'Germany': 'Europe', 'Poland': 'Europe', 'Czechia': 'Europe', 'Czech Republic': 'Europe',
+      'Iceland': 'Europe', 'Ireland': 'Europe', 'England': 'Europe', 'United Kingdom': 'Europe',
+      'Norway': 'Europe', 'Sweden': 'Europe', 'Finland': 'Europe', 'Estonia': 'Europe',
+      'Latvia': 'Europe', 'Lithuania': 'Europe', 'Denmark': 'Europe', 'Netherlands': 'Europe',
+      'Belgium': 'Europe', 'Germany': 'Europe', 'Poland': 'Europe', 'Czech Republic': 'Europe',
       'Slovakia': 'Europe', 'France': 'Europe', 'Switzerland': 'Europe', 'Austria': 'Europe',
       'Hungary': 'Europe', 'Romania': 'Europe', 'Moldova': 'Europe', 'Ukraine': 'Europe',
       'Belarus': 'Europe', 'Portugal': 'Europe', 'Spain': 'Europe', 'Italy': 'Europe',
       'Slovenia': 'Europe', 'Croatia': 'Europe', 'Bosnia and Herzegovina': 'Europe',
-      'Serbia': 'Europe', 'Montenegro': 'Europe', 'Albania': 'Europe', 'North Macedonia': 'Europe',
-      'Macedonia': 'Europe', 'Greece': 'Europe', 'Bulgaria': 'Europe',
+      'Republic of Serbia': 'Europe', 'Serbia': 'Europe', 'Montenegro': 'Europe',
+      'Albania': 'Europe', 'Macedonia': 'Europe', 'Greece': 'Europe', 'Bulgaria': 'Europe',
       // Africa
       'Morocco': 'Africa', 'Algeria': 'Africa', 'Tunisia': 'Africa', 'Libya': 'Africa',
       'Egypt': 'Africa', 'Mauritania': 'Africa', 'Mali': 'Africa', 'Niger': 'Africa',
       'Chad': 'Africa', 'Sudan': 'Africa', 'South Sudan': 'Africa', 'Eritrea': 'Africa',
       'Ethiopia': 'Africa', 'Somalia': 'Africa', 'Senegal': 'Africa', 'Guinea': 'Africa',
-      'Sierra Leone': 'Africa', 'Liberia': 'Africa', 'Ivory Coast': 'Africa', "Côte d'Ivoire": 'Africa',
+      'Sierra Leone': 'Africa', 'Liberia': 'Africa', 'Ivory Coast': 'Africa',
       'Burkina Faso': 'Africa', 'Ghana': 'Africa', 'Togo': 'Africa', 'Benin': 'Africa',
       'Nigeria': 'Africa', 'Cameroon': 'Africa', 'Central African Republic': 'Africa',
-      'Gabon': 'Africa', 'Republic of the Congo': 'Africa', 'Congo': 'Africa',
+      'Gabon': 'Africa', 'Republic of the Congo': 'Africa',
       'Democratic Republic of the Congo': 'Africa', 'Uganda': 'Africa', 'Kenya': 'Africa',
-      'Tanzania': 'Africa', 'United Republic of Tanzania': 'Africa', 'Angola': 'Africa',
+      'United Republic of Tanzania': 'Africa', 'Tanzania': 'Africa', 'Angola': 'Africa',
       'Zambia': 'Africa', 'Malawi': 'Africa', 'Mozambique': 'Africa', 'Zimbabwe': 'Africa',
       'Botswana': 'Africa', 'Namibia': 'Africa', 'South Africa': 'Africa', 'Madagascar': 'Africa',
       // Asia
@@ -336,10 +338,12 @@
     };
 
     const DISPLAY_NAMES = {
+      'USA': 'United States',
       'United States of America': 'United States',
+      'England': 'United Kingdom',
       'United Republic of Tanzania': 'Tanzania',
       'Democratic Republic of the Congo': 'DR Congo',
-      'Republic of the Congo': 'Republic of the Congo',
+      'Republic of Serbia': 'Serbia',
       'Czech Republic': 'Czechia'
     };
 
@@ -356,7 +360,7 @@
 
     const WIDTH = 760;
     const HEIGHT = 390;
-    const PADDING = 34;
+    const PADDING = 36;
 
     let countries = [];
     let currentCountry = null;
@@ -364,22 +368,118 @@
     let totalScore = 0;
     let answered = false;
 
-    function getDisplayName(rawName) {
-      return DISPLAY_NAMES[rawName] || rawName;
+    // Mercator Y projection helper (clamped to avoid pole infinity)
+    function mercatorY(lat) {
+      const clamped = Math.max(-82, Math.min(82, lat));
+      const rad = (clamped * Math.PI) / 180;
+      return Math.log(Math.tan(Math.PI / 4 + rad / 2)) * (180 / Math.PI);
+    }
+
+    // Extract polygon rings from GeoJSON Polygon or MultiPolygon
+    function getPolygons(geometry) {
+      if (!geometry) return [];
+      if (geometry.type === 'Polygon') return [geometry.coordinates];
+      if (geometry.type === 'MultiPolygon') return geometry.coordinates;
+      return [];
+    }
+
+    // Compute bounding box of a country, clamped to its continent so overseas islands don't break zoom
+    function getFeatureBounds(countryObj) {
+      const cBounds = CONTINENT_BOUNDS[countryObj.continent];
+      const polys = getPolygons(countryObj.feature.geometry);
+
+      let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+
+      function scanPoints(filterByContinent) {
+        polys.forEach(poly => {
+          poly.forEach(ring => {
+            ring.forEach(([lon, lat]) => {
+              if (filterByContinent) {
+                if (lon < cBounds.lon[0] || lon > cBounds.lon[1] || lat < cBounds.lat[0] || lat > cBounds.lat[1]) {
+                  return;
+                }
+              }
+              if (lon < minLon) minLon = lon;
+              if (lon > maxLon) maxLon = lon;
+              if (lat < minLat) minLat = lat;
+              if (lat > maxLat) maxLat = lat;
+            });
+          });
+        });
+      }
+
+      scanPoints(true);
+      if (!isFinite(minLon)) {
+        scanPoints(false);
+      }
+
+      return { lon: [minLon, maxLon], lat: [minLat, maxLat] };
+    }
+
+    // Create a projection function [lon, lat] -> [x, y] fitted to given bounds
+    function createProjection(bounds) {
+      const minX = bounds.lon[0];
+      const maxX = bounds.lon[1];
+      const minY = mercatorY(bounds.lat[0]);
+      const maxY = mercatorY(bounds.lat[1]);
+
+      const spanX = Math.max(maxX - minX, 0.5);
+      const spanY = Math.max(maxY - minY, 0.5);
+
+      const availW = WIDTH - PADDING * 2;
+      const availH = HEIGHT - PADDING * 2;
+      const scale = Math.min(availW / spanX, availH / spanY);
+
+      const offsetX = PADDING + (availW - spanX * scale) / 2;
+      const offsetY = PADDING + (availH - spanY * scale) / 2;
+
+      return function project(lon, lat) {
+        const x = offsetX + (lon - minX) * scale;
+        const y = offsetY + (maxY - mercatorY(lat)) * scale;
+        return [x, y];
+      };
+    }
+
+    // Convert GeoJSON geometry into an SVG path string using the projection
+    function geometryToPath(geometry, project) {
+      const polys = getPolygons(geometry);
+      let d = '';
+      polys.forEach(poly => {
+        poly.forEach(ring => {
+          ring.forEach(([lon, lat], idx) => {
+            const [x, y] = project(lon, lat);
+            d += (idx === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+          });
+          d += 'Z ';
+        });
+      });
+      return d.trim();
     }
 
     async function loadGeoData() {
       try {
         const res = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
+        if (!res.ok) throw new Error('Network error');
         const data = await res.json();
 
-        countries = data.features
-          .filter(f => f.properties && COUNTRY_CONTINENT[f.properties.name])
-          .map(f => ({
+        const seenNames = new Set();
+        countries = [];
+
+        data.features.forEach(f => {
+          const rawName = f.properties && f.properties.name;
+          const continent = COUNTRY_CONTINENT[rawName];
+          if (!rawName || !continent || !f.geometry) return;
+
+          const name = DISPLAY_NAMES[rawName] || rawName;
+          if (seenNames.has(name)) return;
+          seenNames.add(name);
+
+          countries.push({
             feature: f,
-            name: getDisplayName(f.properties.name),
-            continent: COUNTRY_CONTINENT[f.properties.name]
-          }));
+            name,
+            continent
+          });
+        });
 
         loader.style.display = 'none';
         svgEl.style.display = 'block';
@@ -394,16 +494,13 @@
       targetLayer.innerHTML = '';
       continentBadge.classList.remove('visible');
 
-      const projection = d3.geoMercator().fitExtent(
-        [[PADDING, PADDING], [WIDTH - PADDING, HEIGHT - PADDING]],
-        countryObj.feature
-      );
-      const pathGen = d3.geoPath().projection(projection);
+      const bounds = getFeatureBounds(countryObj);
+      const project = createProjection(bounds);
+      const d = geometryToPath(countryObj.feature.geometry, project);
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', pathGen(countryObj.feature));
+      path.setAttribute('d', d);
       path.setAttribute('class', 'target-country');
-      path.id = 'activeTargetPath';
       targetLayer.appendChild(path);
     }
 
@@ -415,36 +512,23 @@
       continentBadge.textContent = continentName;
       continentBadge.classList.add('visible');
 
-      const continentCountries = countries.filter(c => c.continent === continentName);
       const bounds = CONTINENT_BOUNDS[continentName];
+      const project = createProjection(bounds);
 
-      // Build bounding box feature so projection focuses cleanly on the continent
-      const bboxFeature = {
-        type: 'MultiPoint',
-        coordinates: [
-          [bounds.lon[0], bounds.lat[0]],
-          [bounds.lon[1], bounds.lat[1]]
-        ]
-      };
-
-      const projection = d3.geoMercator().fitExtent(
-        [[PADDING, PADDING], [WIDTH - PADDING, HEIGHT - PADDING]],
-        bboxFeature
-      );
-      const pathGen = d3.geoPath().projection(projection);
-
+      const continentCountries = countries.filter(c => c.continent === continentName);
       continentCountries.forEach(c => {
-        const d = pathGen(c.feature);
+        const d = geometryToPath(c.feature.geometry, project);
         if (!d) return;
-        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        p.setAttribute('d', d);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
 
         if (c.name === countryObj.name) {
-          p.setAttribute('class', `target-country ${isCorrect ? 'correct' : 'wrong'}`);
-          targetLayer.appendChild(p);
+          path.setAttribute('class', `target-country ${isCorrect ? 'correct' : 'wrong'}`);
+          targetLayer.appendChild(path);
         } else {
-          p.setAttribute('class', 'continent-country');
-          continentLayer.appendChild(p);
+          path.setAttribute('class', 'continent-country');
+          continentLayer.appendChild(path);
         }
       });
     }
@@ -467,7 +551,8 @@
       const pool = countries.filter(c => !currentCountry || c.name !== currentCountry.name);
       currentCountry = pool[Math.floor(Math.random() * pool.length)];
 
-      // Prefer distractors from the same continent so choices are interesting
+      renderIsolatedCountry(currentCountry);
+
       const sameContinent = countries.filter(
         c => c.continent === currentCountry.continent && c.name !== currentCountry.name
       );
@@ -494,8 +579,6 @@
         btn.addEventListener('click', () => handleChoice(choice.name, btn));
         optionsGrid.appendChild(btn);
       });
-
-      renderIsolatedCountry(currentCountry);
     }
 
     function handleChoice(selectedName, clickedBtn) {
@@ -531,6 +614,7 @@
 
       renderContinentReveal(currentCountry, isCorrect);
       nextBtn.classList.add('visible');
+      nextBtn.focus();
     }
 
     nextBtn.addEventListener('click', startRound);
