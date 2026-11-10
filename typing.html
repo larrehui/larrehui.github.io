@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>typing</title>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --panel: #111622;
+      --key-bg: #1a2234;
+      --key-border: #2a3652;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --accent: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px;
+      gap: 28px;
+    }
+
+    .topbar {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .back-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover {
+      color: var(--text);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      background: var(--key-bg);
+      color: var(--text);
+      border: 1px solid var(--key-border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .editor-wrap {
+      width: 100%;
+      max-width: 920px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--key-border);
+      border-radius: 12px;
+      padding: 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .keyboard {
+      width: 100%;
+      max-width: 920px;
+      background: var(--panel);
+      border: 1px solid var(--key-border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .kb-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .key {
+      position: relative;
+      height: 54px;
+      flex: 1;
+      min-width: 36px;
+      background: var(--key-bg);
+      border: 1px solid var(--key-border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: transform 0.06s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .key.w-1-5 { flex: 1.5; }
+    .key.w-1-75 { flex: 1.75; }
+    .key.w-2 { flex: 2; }
+    .key.w-2-25 { flex: 2.25; }
+    .key.w-6 { flex: 6; }
+
+    .key.active {
+      transform: translateY(2px) scale(0.97);
+      border-color: #fff !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.75);
+    }
+
+    .key-count {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.75);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .key.visited .key-count {
+      opacity: 1;
+    }
+
+    @media (max-width: 680px) {
+      .keyboard {
+        padding: 10px;
+        gap: 5px;
+      }
+      .kb-row {
+        gap: 4px;
+      }
+      .key {
+        height: 42px;
+        font-size: 0.72rem;
+        min-width: 20px;
+      }
+      .key-count {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="index.html" class="back-link">&larr; back</a>
+    <div class="controls">
+      <span class="stat" id="totalStat">Keypresses: 0</span>
+      <button class="btn" id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+
+  <div class="editor-wrap">
+    <textarea id="typingArea" placeholder="Start typing anything here..." autofocus></textarea>
+  </div>
+
+  <div class="keyboard" id="keyboard" aria-label="On-screen keyboard">
+    <!-- Row 1 -->
+    <div class="kb-row">
+      <div class="key" data-code="Backquote"><span>`</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit1"><span>1</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit2"><span>2</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit3"><span>3</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit4"><span>4</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit5"><span>5</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit6"><span>6</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit7"><span>7</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit8"><span>8</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit9"><span>9</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Digit0"><span>0</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Minus"><span>-</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Equal"><span>=</span><span class="key-count">0</span></div>
+      <div class="key w-2" data-code="Backspace"><span>Backspace</span><span class="key-count">0</span></div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="kb-row">
+      <div class="key w-1-5" data-code="Tab"><span>Tab</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyQ"><span>Q</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyW"><span>W</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyE"><span>E</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyR"><span>R</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyT"><span>T</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyY"><span>Y</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyU"><span>U</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyI"><span>I</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyO"><span>O</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyP"><span>P</span><span class="key-count">0</span></div>
+      <div class="key" data-code="BracketLeft"><span>[</span><span class="key-count">0</span></div>
+      <div class="key" data-code="BracketRight"><span>]</span><span class="key-count">0</span></div>
+      <div class="key w-1-5" data-code="Backslash"><span>\</span><span class="key-count">0</span></div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="kb-row">
+      <div class="key w-1-75" data-code="CapsLock"><span>Caps</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyA"><span>A</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyS"><span>S</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyD"><span>D</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyF"><span>F</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyG"><span>G</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyH"><span>H</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyJ"><span>J</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyK"><span>K</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyL"><span>L</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Semicolon"><span>;</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Quote"><span>'</span><span class="key-count">0</span></div>
+      <div class="key w-2-25" data-code="Enter"><span>Enter</span><span class="key-count">0</span></div>
+    </div>
+
+    <!-- Row 4 -->
+    <div class="kb-row">
+      <div class="key w-2-25" data-code="ShiftLeft"><span>Shift</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyZ"><span>Z</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyX"><span>X</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyC"><span>C</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyV"><span>V</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyB"><span>B</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyN"><span>N</span><span class="key-count">0</span></div>
+      <div class="key" data-code="KeyM"><span>M</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Comma"><span>,</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Period"><span>.</span><span class="key-count">0</span></div>
+      <div class="key" data-code="Slash"><span>/</span><span class="key-count">0</span></div>
+      <div class="key w-2-25" data-code="ShiftRight"><span>Shift</span><span class="key-count">0</span></div>
+    </div>
+
+    <!-- Row 5 -->
+    <div class="kb-row">
+      <div class="key w-6" data-code="Space"><span>Space</span><span class="key-count">0</span></div>
+    </div>
+  </div>
+
+  <script>
+    const typingArea = document.getElementById('typingArea');
+    const totalStat = document.getElementById('totalStat');
+    const resetBtn = document.getElementById('resetBtn');
+    const keys = document.querySelectorAll('.key');
+
+    const keyMap = {};
+    const counts = {};
+    let totalPresses = 0;
+
+    keys.forEach(keyEl => {
+      const code = keyEl.getAttribute('data-code');
+      keyMap[code] = keyEl;
+      counts[code] = 0;
+    });
+
+    function updateKeyVisual(code) {
+      const keyEl = keyMap[code];
+      if (!keyEl) return;
+
+      const count = counts[code];
+      const countEl = keyEl.querySelector('.key-count');
+      if (countEl) countEl.textContent = count;
+
+      if (count > 0) {
+        keyEl.classList.add('visited');
+        const intensity = Math.min(count / 15, 1);
+        const alpha = (0.18 + intensity * 0.55).toFixed(2);
+        keyEl.style.backgroundColor = `rgba(56, 189, 248, ${alpha})`;
+        keyEl.style.borderColor = `rgba(56, 189, 248, ${Math.min(0.4 + intensity * 0.6, 1).toFixed(2)})`;
+      } else {
+        keyEl.classList.remove('visited');
+        keyEl.style.backgroundColor = '';
+        keyEl.style.borderColor = '';
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const keyEl = keyMap[e.code];
+      if (!keyEl) return;
+
+      if (!e.repeat) {
+        counts[e.code] += 1;
+        totalPresses += 1;
+        totalStat.textContent = `Keypresses: ${totalPresses}`;
+        updateKeyVisual(e.code);
+      }
+
+      keyEl.classList.add('active');
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const keyEl = keyMap[e.code];
+      if (keyEl) {
+        keyEl.classList.remove('active');
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      typingArea.value = '';
+      totalPresses = 0;
+      totalStat.textContent = 'Keypresses: 0';
+      Object.keys(counts).forEach(code => {
+        counts[code] = 0;
+        updateKeyVisual(code);
+      });
+      typingArea.focus();
+    });
+  </script>
+</body>
+</html>
