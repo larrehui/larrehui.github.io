@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>multiplication</title>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --panel: #111622;
+      --card: #1a2234;
+      --border: #2a3652;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --accent: #38bdf8;
+      --correct: #22c55e;
+      --wrong: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px;
+      gap: 24px;
+    }
+
+    .topbar {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .back-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover {
+      color: var(--text);
+    }
+
+    .hud {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud strong {
+      color: var(--accent);
+    }
+
+    .layout {
+      width: 100%;
+      max-width: 920px;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .slider-label strong {
+      color: var(--accent);
+      font-size: 1.05rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .summary-pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-pill strong {
+      color: var(--text);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #0a0d14;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.98rem;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.92;
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* Quiz Prompt Area */
+    .quiz-box {
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .question-display {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .answer-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .answer-input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 1.25rem;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .answer-input:focus {
+      border-color: var(--accent);
+    }
+
+    .last-feedback {
+      min-height: 22px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .last-feedback.correct { color: var(--correct); }
+    .last-feedback.wrong { color: var(--wrong); }
+
+    /* Completion Results */
+    .results-box {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-card span {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-card strong {
+      font-size: 1.2rem;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .history-list {
+      max-height: 210px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-item.ok { color: var(--correct); }
+    .history-item.bad { color: var(--wrong); }
+
+    /* Multiplication Table Grid */
+    .grid-wrap {
+      overflow-x: auto;
+    }
+
+    table.mult-grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 4px;
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mult-grid th,
+    .mult-grid td {
+      height: 34px;
+      min-width: 34px;
+      text-align: center;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+    }
+
+    .mult-grid th {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .mult-grid td {
+      background: var(--card);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .mult-grid td.inactive {
+      opacity: 0.22;
+      background: transparent;
+    }
+
+    .mult-grid td.active-cell {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--text);
+    }
+
+    .mult-grid td.current-question {
+      border-color: #fff;
+      background: var(--accent);
+      color: #0a0d14;
+      transform: scale(1.08);
+      font-weight: 800;
+    }
+
+    .mult-grid td.answered-correct {
+      background: rgba(34, 197, 94, 0.22);
+      border-color: var(--correct);
+      color: #dcfce7;
+    }
+
+    .mult-grid td.answered-wrong {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: var(--wrong);
+      color: #fee2e2;
+    }
+
+    @media (max-width: 780px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="index.html" class="back-link">&larr; back</a>
+    <div class="hud">
+      <span>Progress: <strong id="progressStat">0 / 0</strong></span>
+      <span>Correct: <strong id="correctStat">0</strong></span>
+      <span>Time: <strong id="timerStat">00:00.0</strong></span>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left Column: Setup / Active Question / Results -->
+    <div class="panel">
+      <!-- Setup View -->
+      <div id="setupView" style="display:flex; flex-direction:column; gap:18px;">
+        <h2>Configure Multiplication Grid</h2>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Rows (First number: 1 to <span id="rowLabelMax">12</span>)</span>
+            <strong id="rowValue">12</strong>
+          </div>
+          <input type="range" id="rowSlider" min="1" max="12" value="12" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Columns (Second number: 1 to <span id="colLabelMax">12</span>)</span>
+            <strong id="colValue">12</strong>
+          </div>
+          <input type="range" id="colSlider" min="1" max="12" value="12" />
+        </div>
+
+        <div class="summary-pill">
+          <span>Grid Size: <strong id="gridDimText">12 &times; 12</strong></span>
+          <span>Total Questions: <strong id="totalQuestionsText">144</strong></span>
+        </div>
+
+        <button class="btn" id="confirmBtn" type="button">Confirm &amp; Start</button>
+      </div>
+
+      <!-- Quiz View -->
+      <div class="quiz-box" id="quizView">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Solve Question</h2>
+          <button class="btn btn-secondary" id="abortBtn" type="button" style="padding:6px 12px; font-size:0.8rem;">Change Grid</button>
+        </div>
+
+        <div class="question-display" id="questionDisplay">1 &times; 1 = ?</div>
+
+        <form class="answer-form" id="answerForm" autocomplete="off">
+          <input
+            type="number"
+            id="answerInput"
+            class="answer-input"
+            placeholder="Answer"
+            required
+          />
+          <button class="btn" type="submit">Submit</button>
+        </form>
+
+        <div class="last-feedback" id="lastFeedback"></div>
+      </div>
+
+      <!-- Results View -->
+      <div class="results-box" id="resultsView">
+        <h2>Table Complete!</h2>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span>Total Time</span>
+            <strong id="finalTime">00:00.0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Score</span>
+            <strong id="finalScore">0 / 0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Accuracy</span>
+            <strong id="finalAccuracy">100%</strong>
+          </div>
+        </div>
+
+        <div class="history-list" id="historyList"></div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn" id="retryBtn" type="button" style="flex:1;">Play Again</button>
+          <button class="btn btn-secondary" id="reconfigBtn" type="button" style="flex:1;">Change Grid</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Live 1-12 Multiplication Grid -->
+    <div class="panel">
+      <h2>Multiplication Table</h2>
+      <div class="grid-wrap">
+        <table class="mult-grid" id="multGrid" aria-label="Multiplication Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rowSlider = document.getElementById('rowSlider');
+    const colSlider = document.getElementById('colSlider');
+    const rowValue = document.getElementById('rowValue');
+    const colValue = document.getElementById('colValue');
+    const rowLabelMax = document.getElementById('rowLabelMax');
+    const colLabelMax = document.getElementById('colLabelMax');
+    const gridDimText = document.getElementById('gridDimText');
+    const totalQuestionsText = document.getElementById('totalQuestionsText');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const abortBtn = document.getElementById('abortBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const reconfigBtn = document.getElementById('reconfigBtn');
+
+    const setupView = document.getElementById('setupView');
+    const quizView = document.getElementById('quizView');
+    const resultsView = document.getElementById('resultsView');
+
+    const questionDisplay = document.getElementById('questionDisplay');
+    const answerForm = document.getElementById('answerForm');
+    const answerInput = document.getElementById('answerInput');
+    const lastFeedback = document.getElementById('lastFeedback');
+
+    const progressStat = document.getElementById('progressStat');
+    const correctStat = document.getElementById('correctStat');
+    const timerStat = document.getElementById('timerStat');
+
+    const finalTime = document.getElementById('finalTime');
+    const finalScore = document.getElementById('finalScore');
+    const finalAccuracy = document.getElementById('finalAccuracy');
+    const historyList = document.getElementById('historyList');
+    const multGrid = document.getElementById('multGrid');
+
+    const cells = {};
+    let maxRows = 12;
+    let maxCols = 12;
+    let deck = [];
+    let currentIndex = 0;
+    let correctCount = 0;
+    let answerLog = [];
+    let startTime = 0;
+    let timerInterval = null;
+
+    function buildTable() {
+      multGrid.innerHTML = '';
+      const thead = document.createElement('tr');
+      const corner = document.createElement('th');
+      corner.textContent = '×';
+      thead.appendChild(corner);
+
+      for (let c = 1; c <= 12; c++) {
+        const th = document.createElement('th');
+        th.textContent = c;
+        thead.appendChild(th);
+      }
+      multGrid.appendChild(thead);
+
+      for (let r = 1; r <= 12; r++) {
+        const tr = document.createElement('tr');
+        const rowHeader = document.createElement('th');
+        rowHeader.textContent = r;
+        tr.appendChild(rowHeader);
+
+        for (let c = 1; c <= 12; c++) {
+          const td = document.createElement('td');
+          td.id = `cell-${r}-${c}`;
+          td.textContent = '·';
+          cells[`${r}-${c}`] = td;
+          tr.appendChild(td);
+        }
+        multGrid.appendChild(tr);
+      }
+    }
+
+    function previewGridSelection() {
+      maxRows = parseInt(rowSlider.value, 10);
+      maxCols = parseInt(colSlider.value, 10);
+
+      rowValue.textContent = maxRows;
+      colValue.textContent = maxCols;
+      rowLabelMax.textContent = maxRows;
+      colLabelMax.textContent = maxCols;
+
+      const total = maxRows * maxCols;
+      gridDimText.innerHTML = `${maxRows} &times; ${maxCols}`;
+      totalQuestionsText.textContent = total;
+      progressStat.textContent = `0 / ${total}`;
+
+      for (let r = 1; r <= 12; r++) {
+        for (let c = 1; c <= 12; c++) {
+          const td = cells[`${r}-${c}`];
+          td.className = '';
+          td.textContent = '·';
+          if (r <= maxRows && c <= maxCols) {
+            td.classList.add('active-cell');
+          } else {
+            td.classList.add('inactive');
+          }
+        }
+      }
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = ms / 1000;
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = (totalSeconds % 60).toFixed(1);
+      const minStr = String(mins).padStart(2, '0');
+      const secStr = secs.padStart(4, '0');
+      return `${minStr}:${secStr}`;
+    }
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function startQuiz() {
+      clearInterval(timerInterval);
+      previewGridSelection();
+
+      deck = [];
+      for (let r = 1; r <= maxRows; r++) {
+        for (let c = 1; c <= maxCols; c++) {
+          deck.push({ r, c, answer: r * c });
+        }
+      }
+      deck = shuffle(deck);
+
+      currentIndex = 0;
+      correctCount = 0;
+      answerLog = [];
+      correctStat.textContent = '0';
+      progressStat.textContent = `0 / ${deck.length}`;
+      lastFeedback.textContent = '';
+      lastFeedback.className = 'last-feedback';
+
+      setupView.style.display = 'none';
+      resultsView.style.display = 'none';
+      quizView.style.display = 'flex';
+
+      startTime = performance.now();
+      timerStat.textContent = '00:00.0';
+      timerInterval = setInterval(() => {
+        timerStat.textContent = formatTime(performance.now() - startTime);
+      }, 100);
+
+      showCurrentQuestion();
+    }
+
+    function showCurrentQuestion() {
+      const q = deck[currentIndex];
+      questionDisplay.innerHTML = `${q.r} &times; ${q.c} = ?`;
+
+      Object.values(cells).forEach(td => td.classList.remove('current-question'));
+      const cell = cells[`${q.r}-${q.c}`];
+      if (cell) {
+        cell.classList.add('current-question');
+        cell.textContent = '?';
+      }
+
+      answerInput.value = '';
+      answerInput.focus();
+    }
+
+    function handleAnswerSubmit(e) {
+      e.preventDefault();
+      if (currentIndex >= deck.length) return;
+
+      const raw = answerInput.value.trim();
+      if (raw === '') return;
+
+      const userVal = parseInt(raw, 10);
+      const q = deck[currentIndex];
+      const isCorrect = userVal === q.answer;
+
+      if (isCorrect) {
+        correctCount += 1;
+        correctStat.textContent = String(correctCount);
+        lastFeedback.textContent = `Correct! ${q.r} × ${q.c} = ${q.answer}`;
+        lastFeedback.className = 'last-feedback correct';
+      } else {
+        lastFeedback.textContent = `Not quite — ${q.r} × ${q.c} = ${q.answer} (you entered ${userVal})`;
+        lastFeedback.className = 'last-feedback wrong';
+      }
+
+      const cell = cells[`${q.r}-${q.c}`];
+      if (cell) {
+        cell.classList.remove('current-question', 'active-cell');
+        cell.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+        cell.textContent = q.answer;
+        cell.title = isCorrect
+          ? `${q.r} × ${q.c} = ${q.answer} (Correct)`
+          : `${q.r} × ${q.c} = ${q.answer} (You answered: ${userVal})`;
+      }
+
+      answerLog.push({
+        r: q.r,
+        c: q.c,
+        expected: q.answer,
+        given: userVal,
+        isCorrect
+      });
+
+      currentIndex += 1;
+      progressStat.textContent = `${currentIndex} / ${deck.length}`;
+
+      if (currentIndex < deck.length) {
+        showCurrentQuestion();
+      } else {
+        finishQuiz();
+      }
+    }
+
+    function finishQuiz() {
+      clearInterval(timerInterval);
+      const elapsed = performance.now() - startTime;
+      const formatted = formatTime(elapsed);
+      timerStat.textContent = formatted;
+
+      quizView.style.display = 'none';
+      resultsView.style.display = 'flex';
+
+      const pct = Math.round((correctCount / deck.length) * 100);
+      finalTime.textContent = formatted;
+      finalScore.textContent = `${correctCount} / ${deck.length}`;
+      finalAccuracy.textContent = `${pct}%`;
+
+      historyList.innerHTML = '';
+      answerLog.forEach((entry, idx) => {
+        const row = document.createElement('div');
+        row.className = `history-item ${entry.isCorrect ? 'ok' : 'bad'}`;
+        const left = document.createElement('span');
+        left.textContent = `#${idx + 1}: ${entry.r} × ${entry.c} = ${entry.expected}`;
+        const right = document.createElement('span');
+        right.textContent = entry.isCorrect
+          ? `✓ ${entry.given}`
+          : `✗ ${entry.given} (ans: ${entry.expected})`;
+        row.appendChild(left);
+        row.appendChild(right);
+        historyList.appendChild(row);
+      });
+    }
+
+    function returnToSetup() {
+      clearInterval(timerInterval);
+      timerStat.textContent = '00:00.0';
+      correctStat.textContent = '0';
+      quizView.style.display = 'none';
+      resultsView.style.display = 'none';
+      setupView.style.display = 'flex';
+      previewGridSelection();
+    }
+
+    rowSlider.addEventListener('input', previewGridSelection);
+    colSlider.addEventListener('input', previewGridSelection);
+    confirmBtn.addEventListener('click', startQuiz);
+    answerForm.addEventListener('submit', handleAnswerSubmit);
+    abortBtn.addEventListener('click', returnToSetup);
+    retryBtn.addEventListener('click', startQuiz);
+    reconfigBtn.addEventListener('click', returnToSetup);
+
+    buildTable();
+    previewGridSelection();
+  </script>
+</body>
+</html>
